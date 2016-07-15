@@ -48,7 +48,7 @@
 //#define TEST_TRANSFORMS
 
 #ifdef TEST_TRANSFORMS
-#include "..\..\photo\src\bm3d_denoising_invoker.hpp"
+#include "..\..\photo\src\bm3d_denoising_invoker_commons.hpp"
 #include "..\..\photo\src\bm3d_denoising_transforms.hpp"
 #endif
 
@@ -71,7 +71,7 @@ TEST(Photo_DenoisingBm3dGrayscale, regression_L2)
     ASSERT_FALSE(expected.empty()) << "Could not load reference image " << expected_path;
 
     cv::Mat result;
-    cv::bm3dDenoising(original, result, 10, 4, 16, 2500, 8, cv::NORM_L2);
+    cv::bm3dDenoising(original, result, 10, 4, 16, 2500, -1, 8, cv::NORM_L2, cv::BM3D_STEP1);
 
     DUMP(result, expected_path + ".res.png");
 
@@ -90,8 +90,16 @@ TEST(Photo_DenoisingBm3dGrayscale, regression_L1)
     ASSERT_FALSE(original.empty()) << "Could not load input image " << original_path;
     ASSERT_FALSE(expected.empty()) << "Could not load reference image " << expected_path;
 
-    cv::Mat result;
-    cv::bm3dDenoising(original, result, 10, 4, 16, 2500, 8, cv::NORM_L1);
+    cv::Mat basic, result;
+
+    // BM3D: 2 steps separately
+    cv::bm3dDenoising(original, basic, 10, 4, 16, 2500, -1, 8, cv::NORM_L1, cv::BM3D_STEP1);
+    //result = basic;
+    cv::bm3dDenoising(original, basic, result, 1, 4, 16, 400, 8, cv::NORM_L1, cv::BM3D_STEP2);
+
+    //// BM3D at once
+    //cv::bm3dDenoising(original, cv::Mat(), result, 10, 4, 16, 2500, 400, 8, cv::NORM_L1, cv::BM3D_STEPALL);
+    //cv::bm3dDenoising(original, result, 10, 4, 16, 2500, 400, 8, cv::NORM_L1);
 
     DUMP(result, expected_path + ".res.png");
 
@@ -111,7 +119,7 @@ TEST(Photo_DenoisingBm3dGrayscale, regression_L2_8x8)
     ASSERT_FALSE(expected.empty()) << "Could not load reference image " << expected_path;
 
     cv::Mat result;
-    cv::bm3dDenoising(original, result, 10, 8, 16, 2500, 8, cv::NORM_L2);
+    cv::bm3dDenoising(original, result, 10, 8, 16, 2500, -1, 8, cv::NORM_L2, cv::BM3D_STEP1);
 
     DUMP(result, expected_path + ".res.png");
 
@@ -350,7 +358,7 @@ TEST(Photo_DenoisingBm3d, speed)
     cv::Mat src = cv::imread(imgname, 0), dst;
 
     double t = (double)cv::getTickCount();
-    cv::bm3dDenoising(src, dst, 1, 4, 8, 1);
+    cv::bm3dDenoising(src, dst, 1, 4, 8, 1, -1, 8, cv::NORM_L2, cv::BM3D_STEP1);
     t = (double)cv::getTickCount() - t;
     printf("execution time: %gms\n", t*1000. / cv::getTickFrequency());
 }
