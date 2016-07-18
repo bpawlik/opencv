@@ -100,7 +100,6 @@ void cv::bm3dDenoising(
     int type = _src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
     CV_Assert(1 == cn);
     CV_Assert(cv::BM3D_HAAR == transformType);
-    CV_Assert(type == _basic.type());
 
     Size srcSize = _src.size();
 
@@ -110,10 +109,10 @@ void cv::bm3dDenoising(
         _basic.create(srcSize, type);
         break;
     case BM3D_STEP2:
+        CV_Assert(type == _basic.type());
         _dst.create(srcSize, type);
         break;
     case BM3D_STEPALL:
-        _basic.create(srcSize, type);
         _dst.create(srcSize, type);
         break;
     default:
@@ -121,7 +120,7 @@ void cv::bm3dDenoising(
     }
 
     Mat src = _src.getMat();
-    Mat basic = _basic.getMat();
+    Mat basic = _basic.getMat().empty() ? Mat(srcSize, type) : _basic.getMat();
     Mat dst = _dst.getMat();
 
     switch (normType) {

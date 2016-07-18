@@ -83,17 +83,14 @@ inline static int WienerFiltering(BlockMatch<T, DT, CT> *zSrc, BlockMatch<T, DT,
 
     for (int i = 0; i < N; ++i)
     {
-        //int wie = std::abs(zBasic[i][n]) * *thrMap++;
-
+        // Possible optimization point here to get rid of floats and casts
         int basicSq = zBasic[i][n] * zBasic[i][n];
         int sigmaSq = *thrMap * *thrMap;
         int denom = basicSq + sigmaSq;
-        int wie = denom == 0 ? 1 : (basicSq / denom);
-
-        wienerCoeffs += wie;
+        float wie = (denom == 0) ? 1.0f : ((float)basicSq / (float)denom);
 
         zBasic[i][n] = (T)(zSrc[i][n] * wie);
-
+        wienerCoeffs += (int)wie;
         ++thrMap;
     }
 

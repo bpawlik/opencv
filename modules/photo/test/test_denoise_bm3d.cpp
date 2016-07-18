@@ -44,7 +44,7 @@
 #include "opencv2/photo.hpp"
 #include <string>
 
-#define DUMP_RESULTS
+//#define DUMP_RESULTS
 //#define TEST_TRANSFORMS
 
 #ifdef TEST_TRANSFORMS
@@ -62,7 +62,7 @@ TEST(Photo_DenoisingBm3dGrayscale, regression_L2)
 {
     std::string folder = std::string(cvtest::TS::ptr()->get_data_path()) + "denoising/";
     std::string original_path = folder + "lena_noised_gaussian_sigma=10.png";
-    std::string expected_path = folder + "lena_noised_denoised_bm3d_grayscale_l2_tw=4_sw=16_h=10_bm=2500.png";
+    std::string expected_path = folder + "lena_noised_denoised_bm3d_wiener_grayscale_l2_tw=4_sw=16_h=10_bm=400.png";
 
     cv::Mat original = cv::imread(original_path, cv::IMREAD_GRAYSCALE);
     cv::Mat expected = cv::imread(expected_path, cv::IMREAD_GRAYSCALE);
@@ -70,12 +70,49 @@ TEST(Photo_DenoisingBm3dGrayscale, regression_L2)
     ASSERT_FALSE(original.empty()) << "Could not load input image " << original_path;
     ASSERT_FALSE(expected.empty()) << "Could not load reference image " << expected_path;
 
-    cv::Mat result;
-    cv::bm3dDenoising(original, result, 10, 4, 16, 2500, -1, 8, cv::NORM_L2, cv::BM3D_STEP1);
+    // BM3D: two different calls doing exactly the same thing
+    cv::Mat result, resultSec;
+    cv::bm3dDenoising(original, cv::Mat(), resultSec, 10, 4, 16, 2500, 400, 8, cv::NORM_L2, cv::BM3D_STEPALL);
+    cv::bm3dDenoising(original, result, 10, 4, 16, 2500, 400, 8, cv::NORM_L2, cv::BM3D_STEPALL);
+
+    DUMP(result, expected_path + ".res.png");
+
+    ASSERT_EQ(cvtest::norm(result, resultSec, cv::NORM_L2), 0);
+    ASSERT_LT(cvtest::norm(result, expected, cv::NORM_L2), 200);
+    ASSERT_EQ(cvtest::norm(result, expected, cv::NORM_L2), 0);
+}
+
+TEST(Photo_DenoisingBm3dGrayscale, regression_L2_separate)
+{
+    std::string folder = std::string(cvtest::TS::ptr()->get_data_path()) + "denoising/";
+    std::string original_path = folder + "lena_noised_gaussian_sigma=10.png";
+    std::string expected_basic_path = folder + "lena_noised_denoised_bm3d_grayscale_l2_tw=4_sw=16_h=10_bm=2500.png";
+    std::string expected_path = folder + "lena_noised_denoised_bm3d_wiener_grayscale_l2_tw=4_sw=16_h=10_bm=400.png";
+
+    cv::Mat original = cv::imread(original_path, cv::IMREAD_GRAYSCALE);
+    cv::Mat expected_basic = cv::imread(expected_basic_path, cv::IMREAD_GRAYSCALE);
+    cv::Mat expected = cv::imread(expected_path, cv::IMREAD_GRAYSCALE);
+
+    ASSERT_FALSE(original.empty()) << "Could not load input image " << original_path;
+    ASSERT_FALSE(expected_basic.empty()) << "Could not load reference image " << expected_basic_path;
+    ASSERT_FALSE(expected.empty()) << "Could not load input image " << expected_path;
+
+    cv::Mat basic, result;
+
+    // BM3D step 1
+    cv::bm3dDenoising(original, basic, 10, 4, 16, 2500, -1, 8, cv::NORM_L2, cv::BM3D_STEP1);
+    ASSERT_EQ(cvtest::norm(basic, expected_basic, cv::NORM_L2), 0);
+    DUMP(basic, expected_basic_path + ".res.basic.png");
+
+    // BM3D step 2
+    cv::bm3dDenoising(original, basic, result, 10, 4, 16, 2500, 400, 8, cv::NORM_L2, cv::BM3D_STEP2);
+    ASSERT_EQ(cvtest::norm(basic, expected_basic, cv::NORM_L2), 0);
+    DUMP(basic, expected_basic_path + ".res.basic2.png");
 
     DUMP(result, expected_path + ".res.png");
 
     ASSERT_LT(cvtest::norm(result, expected, cv::NORM_L2), 200);
+    ASSERT_EQ(cvtest::norm(result, expected, cv::NORM_L2), 0);
 }
 
 TEST(Photo_DenoisingBm3dGrayscale, regression_L1)
@@ -90,20 +127,13 @@ TEST(Photo_DenoisingBm3dGrayscale, regression_L1)
     ASSERT_FALSE(original.empty()) << "Could not load input image " << original_path;
     ASSERT_FALSE(expected.empty()) << "Could not load reference image " << expected_path;
 
-    cv::Mat basic, result;
-
-    // BM3D: 2 steps separately
-    cv::bm3dDenoising(original, basic, 10, 4, 16, 2500, -1, 8, cv::NORM_L1, cv::BM3D_STEP1);
-    //result = basic;
-    cv::bm3dDenoising(original, basic, result, 1, 4, 16, 400, 8, cv::NORM_L1, cv::BM3D_STEP2);
-
-    //// BM3D at once
-    //cv::bm3dDenoising(original, cv::Mat(), result, 10, 4, 16, 2500, 400, 8, cv::NORM_L1, cv::BM3D_STEPALL);
-    //cv::bm3dDenoising(original, result, 10, 4, 16, 2500, 400, 8, cv::NORM_L1);
+    cv::Mat result;
+    cv::bm3dDenoising(original, result, 10, 4, 16, 2500, -1, 8, cv::NORM_L1, cv::BM3D_STEP1);
 
     DUMP(result, expected_path + ".res.png");
 
     ASSERT_LT(cvtest::norm(result, expected, cv::NORM_L2), 200);
+    ASSERT_EQ(cvtest::norm(result, expected, cv::NORM_L2), 0);
 }
 
 TEST(Photo_DenoisingBm3dGrayscale, regression_L2_8x8)
@@ -124,6 +154,7 @@ TEST(Photo_DenoisingBm3dGrayscale, regression_L2_8x8)
     DUMP(result, expected_path + ".res.png");
 
     ASSERT_LT(cvtest::norm(result, expected, cv::NORM_L2), 200);
+    ASSERT_EQ(cvtest::norm(result, expected, cv::NORM_L2), 0);
 }
 
 #ifdef TEST_TRANSFORMS

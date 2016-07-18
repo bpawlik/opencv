@@ -112,7 +112,7 @@ Bm3dDenoisingInvokerStep2<T, IT, UIT, D, WT, TT>::Bm3dDenoisingInvokerStep2(
     const float &h,
     const int &hBM,
     const int &groupSize) :
-    src_(src), dst_(dst), basic_(basic), groupSize_(groupSize), thrMap_(NULL)
+    src_(src), basic_(basic), dst_(dst), groupSize_(groupSize), thrMap_(NULL)
 {
     groupSize_ = getLargestPowerOf2SmallerThan(groupSize);
     CV_Assert(groupSize <= BM3D_MAX_3D_SIZE && groupSize > 0);
@@ -339,7 +339,7 @@ void Bm3dDenoisingInvokerStep2<T, IT, UIT, D, WT, TT>::operator() (const Range& 
         } // i
     } // j
 
-      // Cleanup
+    // Cleanup
     for (int i = 0; i < searchWindowSizeSq; ++i)
     {
         bmBasic[i].release();
